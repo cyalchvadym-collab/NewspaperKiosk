@@ -465,6 +465,9 @@ namespace KioskNewspapersMagazines
 
         static void ShowMainMenu()
         {
+            
+            #endregion
+            
             while (true)
             {
                 Console.WriteLine();
@@ -800,4 +803,3 @@ namespace KioskNewspapersMagazines
         #endregion
     }
 }
-

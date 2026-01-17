@@ -1,140 +1,273 @@
 using System;
-using System.Text;
 using System.Collections.Generic;
+using System.Text;
 
-namespace NewspaperKioskLab5
+namespace Lab5_Kiosk
 {
+    enum Role
+    {
+        None,
+        Admin,
+        Customer
+    }
+
+    enum PublicationType
+    {
+        Newspaper,
+        Magazine
+    }
+
+    class Publication
+    {
+        public string Title { get; set; }
+        public PublicationType Type { get; set; }
+        public double Price { get; set; }
+
+        public Publication(string title, PublicationType type, double price)
+        {
+            Title = title;
+            Type = type;
+            Price = price;
+        }
+    }
+
+    class UserSession
+    {
+        public Role Role { get; set; } = Role.None;
+        public string Username { get; set; } = "";
+    }
+
     class Program
     {
-        private static List<Publication> publications = new();
-        private static List<Account> customers = new();
-        private static List<Account> sellers = new();
+        static List<Publication> publications = new List<Publication>();
+        static UserSession session = new UserSession();
 
-        private static UserSession CurrentSession = new();
+        const string ADMIN_LOGIN = "admin";
+        const string ADMIN_PASSWORD = "1234";
 
         static void Main()
         {
             Console.OutputEncoding = Encoding.UTF8;
-
-            FileDataHandler.LoadAll(ref publications, ref customers, ref sellers);
-
             ShowIntro();
-            AskRoleAndLogin();
-            ShowMainMenu();
-
-            FileDataHandler.SaveAll(publications, customers, sellers);
+            LoginMenu();
+            MainMenu();
         }
+
+        #region Intro & Auth
 
         static void ShowIntro()
         {
             Console.Clear();
-            Console.ForegroundColor = ConsoleColor.Green;
+            Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("======================================");
-            Console.WriteLine("   КІОСК ГАЗЕТ ТА ЖУРНАЛІВ ;
+            Console.WriteLine("     КІОСК ГАЗЕТ ТА ЖУРНАЛІВ");
+            Console.WriteLine("        Лабораторна робота №5");
             Console.WriteLine("======================================");
             Console.ResetColor();
         }
 
-        static void AskRoleAndLogin()
+        static void LoginMenu()
         {
             while (true)
             {
-                Console.WriteLine("\nОберіть роль:");
+                Console.WriteLine("\nОберіть режим входу:");
                 Console.WriteLine("1. Адміністратор");
                 Console.WriteLine("2. Покупець");
-                Console.WriteLine("3. Продавець");
 
-                int choice = GetInt("Вибір:");
+                int choice = ReadInt("Ваш вибір:");
 
                 if (choice == 1)
                 {
-                    string login = GetString("Логін:");
-                    string pass = GetString("Пароль:");
-                    if (login == "admin" && pass == "admin")
+                    if (AdminLogin())
                     {
-                        CurrentSession.Role = Role.Admin;
+                        session.Role = Role.Admin;
+                        session.Username = "admin";
                         return;
                     }
                 }
                 else if (choice == 2)
                 {
-                    CurrentSession.Role = Role.Customer;
+                    session.Role = Role.Customer;
+                    session.Username = "customer";
                     return;
                 }
-                else if (choice == 3)
+                else
                 {
-                    CurrentSession.Role = Role.Seller;
-                    return;
+                    Console.WriteLine("Невірний вибір.");
                 }
-
-                Console.WriteLine("Помилка входу.");
             }
         }
 
-        static void ShowMainMenu()
+        static bool AdminLogin()
+        {
+            Console.Write("Логін: ");
+            string login = Console.ReadLine();
+            Console.Write("Пароль: ");
+            string pass = Console.ReadLine();
+
+            if (login == ADMIN_LOGIN && pass == ADMIN_PASSWORD)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Успішний вхід!");
+                Console.ResetColor();
+                return true;
+            }
+
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("Невірні дані!");
+            Console.ResetColor();
+            return false;
+        }
+
+        #endregion
+
+        #region Main Menu
+
+        static void MainMenu()
         {
             while (true)
             {
-                Console.WriteLine("\nГоловне меню:");
-                Console.WriteLine("1. Переглянути видання");
-                Console.WriteLine("2. Додати видання (адмін)");
-                Console.WriteLine("3. Вийти");
+                Console.WriteLine("\n========== ГОЛОВНЕ МЕНЮ ==========");
+                Console.WriteLine("1. Переглянути всі видання");
+                Console.WriteLine("2. Пошук видання");
 
-                int ch = GetInt("Вибір:");
+                if (session.Role == Role.Admin)
+                {
+                    Console.WriteLine("3. Додати видання");
+                    Console.WriteLine("4. Видалити видання");
+                }
 
-                if (ch == 1)
+                Console.WriteLine("0. Вихід");
+
+                int choice = ReadInt("Оберіть пункт:");
+
+                switch (choice)
                 {
-                    PrintPublications();
-                }
-                else if (ch == 2 && CurrentSession.Role == Role.Admin)
-                {
-                    AddPublication();
-                }
-                else if (ch == 3)
-                {
-                    break;
+                    case 1:
+                        ShowPublications();
+                        break;
+                    case 2:
+                        SearchPublication();
+                        break;
+                    case 3:
+                        if (session.Role == Role.Admin)
+                            AddPublication();
+                        break;
+                    case 4:
+                        if (session.Role == Role.Admin)
+                            DeletePublication();
+                        break;
+                    case 0:
+                        Environment.Exit(0);
+                        break;
+                    default:
+                        Console.WriteLine("Невірний пункт.");
+                        break;
                 }
             }
         }
 
-        static void PrintPublications()
+        #endregion
+
+        #region Publications Logic
+
+        static void ShowPublications()
         {
-            Console.WriteLine("\n=== ВИДАННЯ ===");
+            Console.WriteLine("\n=== СПИСОК ВИДАНЬ ===");
+
             if (publications.Count == 0)
             {
-                Console.WriteLine("Немає видань.");
+                Console.WriteLine("Список порожній.");
                 return;
             }
 
+            int i = 1;
             foreach (var p in publications)
-                Console.WriteLine($"{p.Name} — {p.Price} грн");
+            {
+                Console.WriteLine($"{i}. {p.Title} | {p.Type} | {p.Price} грн");
+                i++;
+            }
         }
 
         static void AddPublication()
         {
-            string name = GetString("Назва видання:");
-            double price = GetDouble("Ціна:");
-            publications.Add(new Publication(name, price));
-            Console.WriteLine("Видання додано.");
+            Console.Write("Назва видання: ");
+            string title = Console.ReadLine();
+
+            Console.WriteLine("Тип:");
+            Console.WriteLine("1. Газета");
+            Console.WriteLine("2. Журнал");
+
+            int typeChoice = ReadInt("Оберіть тип:");
+            PublicationType type = typeChoice == 1 ? PublicationType.Newspaper : PublicationType.Magazine;
+
+            double price = ReadDouble("Ціна:");
+
+            publications.Add(new Publication(title, type, price));
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("Видання додано!");
+            Console.ResetColor();
         }
 
-        static int GetInt(string msg)
+        static void DeletePublication()
         {
-            Console.Write(msg + " ");
-            return int.Parse(Console.ReadLine() ?? "0");
+            ShowPublications();
+            int index = ReadInt("Введіть номер для видалення:") - 1;
+
+            if (index >= 0 && index < publications.Count)
+            {
+                publications.RemoveAt(index);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Видання видалено.");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.WriteLine("Невірний номер.");
+            }
         }
 
-        static double GetDouble(string msg)
+        static void SearchPublication()
         {
-            Console.Write(msg + " ");
-            return double.Parse(Console.ReadLine() ?? "0");
+            Console.Write("Введіть назву для пошуку: ");
+            string search = Console.ReadLine().ToLower();
+
+            bool found = false;
+
+            foreach (var p in publications)
+            {
+                if (p.Title.ToLower().Contains(search))
+                {
+                    Console.WriteLine($"{p.Title} | {p.Type} | {p.Price} грн");
+                    found = true;
+                }
+            }
+
+            if (!found)
+            {
+                Console.WriteLine("Нічого не знайдено.");
+            }
         }
 
-        static string GetString(string msg)
+        #endregion
+
+        #region Helpers
+
+        static int ReadInt(string text)
         {
-            Console.Write(msg + " ");
-            return Console.ReadLine() ?? "";
+            Console.Write(text + " ");
+            int.TryParse(Console.ReadLine(), out int value);
+            return value;
         }
+
+        static double ReadDouble(string text)
+        {
+            Console.Write(text + " ");
+            double.TryParse(Console.ReadLine(), out double value);
+            return value;
+        }
+
+        #endregion
     }
 }
-

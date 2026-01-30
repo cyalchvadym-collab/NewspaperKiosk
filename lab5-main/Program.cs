@@ -1,273 +1,148 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
-namespace Lab5_Kiosk
+class Program
 {
-    enum Role
+    static List<Publication> publications;
+
+    static void Main()
     {
-        None,
-        Admin,
-        Customer
-    }
+        Console.OutputEncoding = Encoding.UTF8;
+        publications = FileService.Load();
 
-    enum PublicationType
-    {
-        Newspaper,
-        Magazine
-    }
-
-    class Publication
-    {
-        public string Title { get; set; }
-        public PublicationType Type { get; set; }
-        public double Price { get; set; }
-
-        public Publication(string title, PublicationType type, double price)
-        {
-            Title = title;
-            Type = type;
-            Price = price;
-        }
-    }
-
-    class UserSession
-    {
-        public Role Role { get; set; } = Role.None;
-        public string Username { get; set; } = "";
-    }
-
-    class Program
-    {
-        static List<Publication> publications = new List<Publication>();
-        static UserSession session = new UserSession();
-
-        const string ADMIN_LOGIN = "admin";
-        const string ADMIN_PASSWORD = "1234";
-
-        static void Main()
-        {
-            Console.OutputEncoding = Encoding.UTF8;
-            ShowIntro();
-            LoginMenu();
-            MainMenu();
-        }
-
-        #region Intro & Auth
-
-        static void ShowIntro()
+        while (true)
         {
             Console.Clear();
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("======================================");
-            Console.WriteLine("     КІОСК ГАЗЕТ ТА ЖУРНАЛІВ");
-            Console.WriteLine("        Лабораторна робота №5");
-            Console.WriteLine("======================================");
-            Console.ResetColor();
-        }
+            PrintHeader();
 
-        static void LoginMenu()
-        {
-            while (true)
+            Console.WriteLine("1. Адміністратор");
+            Console.WriteLine("2. Покупець");
+            Console.WriteLine("0. Вихід");
+            Console.Write("Ваш вибір: ");
+
+            string choice = Console.ReadLine();
+
+            if (choice == "1") AdminMenu();
+            else if (choice == "2") CustomerMenu();
+            else if (choice == "0")
             {
-                Console.WriteLine("\nОберіть режим входу:");
-                Console.WriteLine("1. Адміністратор");
-                Console.WriteLine("2. Покупець");
-
-                int choice = ReadInt("Ваш вибір:");
-
-                if (choice == 1)
-                {
-                    if (AdminLogin())
-                    {
-                        session.Role = Role.Admin;
-                        session.Username = "admin";
-                        return;
-                    }
-                }
-                else if (choice == 2)
-                {
-                    session.Role = Role.Customer;
-                    session.Username = "customer";
-                    return;
-                }
-                else
-                {
-                    Console.WriteLine("Невірний вибір.");
-                }
-            }
-        }
-
-        static bool AdminLogin()
-        {
-            Console.Write("Логін: ");
-            string login = Console.ReadLine();
-            Console.Write("Пароль: ");
-            string pass = Console.ReadLine();
-
-            if (login == ADMIN_LOGIN && pass == ADMIN_PASSWORD)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Успішний вхід!");
-                Console.ResetColor();
-                return true;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("Невірні дані!");
-            Console.ResetColor();
-            return false;
-        }
-
-        #endregion
-
-        #region Main Menu
-
-        static void MainMenu()
-        {
-            while (true)
-            {
-                Console.WriteLine("\n========== ГОЛОВНЕ МЕНЮ ==========");
-                Console.WriteLine("1. Переглянути всі видання");
-                Console.WriteLine("2. Пошук видання");
-
-                if (session.Role == Role.Admin)
-                {
-                    Console.WriteLine("3. Додати видання");
-                    Console.WriteLine("4. Видалити видання");
-                }
-
-                Console.WriteLine("0. Вихід");
-
-                int choice = ReadInt("Оберіть пункт:");
-
-                switch (choice)
-                {
-                    case 1:
-                        ShowPublications();
-                        break;
-                    case 2:
-                        SearchPublication();
-                        break;
-                    case 3:
-                        if (session.Role == Role.Admin)
-                            AddPublication();
-                        break;
-                    case 4:
-                        if (session.Role == Role.Admin)
-                            DeletePublication();
-                        break;
-                    case 0:
-                        Environment.Exit(0);
-                        break;
-                    default:
-                        Console.WriteLine("Невірний пункт.");
-                        break;
-                }
-            }
-        }
-
-        #endregion
-
-        #region Publications Logic
-
-        static void ShowPublications()
-        {
-            Console.WriteLine("\n=== СПИСОК ВИДАНЬ ===");
-
-            if (publications.Count == 0)
-            {
-                Console.WriteLine("Список порожній.");
+                FileService.Save(publications);
                 return;
             }
-
-            int i = 1;
-            foreach (var p in publications)
-            {
-                Console.WriteLine($"{i}. {p.Title} | {p.Type} | {p.Price} грн");
-                i++;
-            }
         }
+    }
 
-        static void AddPublication()
+    // ===== МЕНЮ =====
+
+    static void AdminMenu()
+    {
+        Console.Write("Пароль: ");
+        if (Console.ReadLine() != "admin")
         {
-            Console.Write("Назва видання: ");
-            string title = Console.ReadLine();
-
-            Console.WriteLine("Тип:");
-            Console.WriteLine("1. Газета");
-            Console.WriteLine("2. Журнал");
-
-            int typeChoice = ReadInt("Оберіть тип:");
-            PublicationType type = typeChoice == 1 ? PublicationType.Newspaper : PublicationType.Magazine;
-
-            double price = ReadDouble("Ціна:");
-
-            publications.Add(new Publication(title, type, price));
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Видання додано!");
-            Console.ResetColor();
+            Pause("Невірний пароль!");
+            return;
         }
 
-        static void DeletePublication()
+        while (true)
         {
-            ShowPublications();
-            int index = ReadInt("Введіть номер для видалення:") - 1;
+            Console.Clear();
+            Console.WriteLine("=== АДМІНІСТРАТОР ===");
+            Console.WriteLine("1. Додати видання");
+            Console.WriteLine("2. Переглянути всі");
+            Console.WriteLine("0. Назад");
+            Console.Write("Вибір: ");
 
-            if (index >= 0 && index < publications.Count)
-            {
-                publications.RemoveAt(index);
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Видання видалено.");
-                Console.ResetColor();
-            }
-            else
-            {
-                Console.WriteLine("Невірний номер.");
-            }
+            string choice = Console.ReadLine();
+            if (choice == "1") AddPublication();
+            else if (choice == "2") ShowAll();
+            else if (choice == "0") return;
         }
+    }
 
-        static void SearchPublication()
+    static void CustomerMenu()
+    {
+        while (true)
         {
-            Console.Write("Введіть назву для пошуку: ");
-            string search = Console.ReadLine().ToLower();
+            Console.Clear();
+            Console.WriteLine("=== ПОКУПЕЦЬ ===");
+            Console.WriteLine("1. Переглянути всі");
+            Console.WriteLine("2. Пошук");
+            Console.WriteLine("0. Назад");
+            Console.Write("Вибір: ");
 
-            bool found = false;
-
-            foreach (var p in publications)
-            {
-                if (p.Title.ToLower().Contains(search))
-                {
-                    Console.WriteLine($"{p.Title} | {p.Type} | {p.Price} грн");
-                    found = true;
-                }
-            }
-
-            if (!found)
-            {
-                Console.WriteLine("Нічого не знайдено.");
-            }
+            string choice = Console.ReadLine();
+            if (choice == "1") ShowAll();
+            else if (choice == "2") Search();
+            else if (choice == "0") return;
         }
+    }
 
-        #endregion
+    // ===== ФУНКЦІЇ =====
 
-        #region Helpers
+    static void AddPublication()
+    {
+        Console.Write("Назва: ");
+        string title = Console.ReadLine();
 
-        static int ReadInt(string text)
+        Console.Write("Тип (1-Газета, 2-Журнал): ");
+        string type = Console.ReadLine() == "1" ? "Газета" : "Журнал";
+
+        Console.Write("Ціна: ");
+        double price = double.Parse(Console.ReadLine());
+
+        publications.Add(new Publication(title, type, Price: Price: Price));
+        FileService.Save(publications);
+
+        Pause("Видання додано!");
+    }
+
+    static void ShowAll()
+    {
+        Console.Clear();
+        if (publications.Count == 0)
         {
-            Console.Write(text + " ");
-            int.TryParse(Console.ReadLine(), out int value);
-            return value;
+            Pause("Список порожній.");
+            return;
         }
 
-        static double ReadDouble(string text)
+        foreach (var p in publications)
+            Console.WriteLine(p);
+
+        Pause();
+    }
+
+    static void Search()
+    {
+        Console.Write("Пошук: ");
+        string q = Console.ReadLine().ToLower();
+
+        var results = publications
+            .Where(p => p.Title.ToLower().Contains(q))
+            .ToList();
+
+        if (results.Count == 0)
+            Pause("Нічого не знайдено.");
+        else
         {
-            Console.Write(text + " ");
-            double.TryParse(Console.ReadLine(), out double value);
-            return value;
+            results.ForEach(Console.WriteLine);
+            Pause();
         }
+    }
 
-        #endregion
+    // ===== ДОПОМІЖНЕ =====
+
+    static void PrintHeader()
+    {
+        Console.WriteLine("================================");
+        Console.WriteLine("   КІОСК ГАЗЕТ ТА ЖУРНАЛІВ");
+        Console.WriteLine("================================\n");
+    }
+
+    static void Pause(string msg = "Натисніть Enter...")
+    {
+        Console.WriteLine(msg);
+        Console.ReadLine();
     }
 }
